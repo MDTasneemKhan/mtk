@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProGamer Jake - Gaming Content Creator</title>
+    <title>Minecraft-like Game</title>
     <style>
         * {
             margin: 0;
@@ -12,122 +12,412 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #0a0e27;
-            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            background: #87CEEB;
         }
 
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 2rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
         }
 
-        nav {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 2rem;
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-            text-decoration: none;
-            color: #fff;
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-
-        .nav-links a {
-            color: #fff;
-            text-decoration: none;
-            transition: opacity 0.3s;
-        }
-
-        .nav-links a:hover {
-            opacity: 0.8;
-        }
-
-        .hero {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 6rem 2rem;
-            text-align: center;
-        }
-
-        .hero-content {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .hero h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            animation: slideInDown 0.8s ease;
-        }
-
-        .hero p {
-            font-size: 1.3rem;
-            margin-bottom: 2rem;
-            opacity: 0.95;
-        }
-
-        .cta-button {
-            display: inline-block;
-            background-color: #ff6b6b;
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
             color: white;
-            padding: 0.8rem 2rem;
-            text-decoration: none;
-            border-radius: 30px;
-            transition: all 0.3s;
-            border: none;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: white;
+        }
+
+        #crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+        }
+
+        #crosshair::after {
+            width: 20px;
+            height: 2px;
+            top: 9px;
+        }
+
+        #inventory {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+
+        .inventory-slot {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
+            transition: all 0.2s;
         }
 
-        .cta-button:hover {
-            background-color: #ff5252;
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        .inventory-slot.selected {
+            border-color: white;
+            background: rgba(255, 255, 255, 0.4);
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
+        .inventory-slot:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui">
+            <div>WASD: Move</div>
+            <div>Mouse: Look around</div>
+            <div>Left Click: Remove block</div>
+            <div>Right Click: Place block</div>
+            <div>Space: Jump</div>
+            <div>1-9: Select block type</div>
+        </div>
+        <div id="crosshair"></div>
+        <div id="inventory">
+            <div class="inventory-slot selected" data-block="grass">Grass</div>
+            <div class="inventory-slot" data-block="dirt">Dirt</div>
+            <div class="inventory-slot" data-block="stone">Stone</div>
+            <div class="inventory-slot" data-block="wood">Wood</div>
+            <div class="inventory-slot" data-block="leaves">Leaves</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game constants
+        const WORLD_SIZE = 16;
+        const BLOCK_SIZE = 1;
+        const CHUNK_SIZE = 16;
+
+        // Block types
+        const BLOCK_TYPES = {
+            air: { color: 0x000000, transparent: true },
+            grass: { color: 0x4CAF50 },
+            dirt: { color: 0x8D6E63 },
+            stone: { color: 0x757575 },
+            wood: { color: 0x8D4B2A },
+            leaves: { color: 0x388E3C, transparent: true }
+        };
+
+        class MinecraftGame {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.world = {};
+                this.player = {
+                    position: new THREE.Vector3(0, 20, 0),
+                    velocity: new THREE.Vector3(0, 0, 0),
+                    onGround: false
+                };
+                this.keys = {};
+                this.mouse = { x: 0, y: 0, buttons: 0 };
+                this.selectedBlock = 'grass';
+                this.raycaster = new THREE.Raycaster();
+
+                this.init();
+                this.generateWorld();
+                this.animate();
+            }
+
+            init() {
+                // Setup renderer
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                document.getElementById('game-container').appendChild(this.renderer.domElement);
+
+                // Setup camera
+                this.camera.position.copy(this.player.position);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                this.scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(50, 50, 50);
+                this.scene.add(directionalLight);
+
+                // Event listeners
+                window.addEventListener('resize', () => this.onWindowResize());
+                window.addEventListener('keydown', (e) => this.onKeyDown(e));
+                window.addEventListener('keyup', (e) => this.onKeyUp(e));
+                window.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                window.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                document.addEventListener('pointerlockchange', () => this.onPointerLockChange());
+
+                // Inventory selection
+                document.querySelectorAll('.inventory-slot').forEach(slot => {
+                    slot.addEventListener('click', () => {
+                        document.querySelectorAll('.inventory-slot').forEach(s => s.classList.remove('selected'));
+                        slot.classList.add('selected');
+                        this.selectedBlock = slot.dataset.block;
+                    });
+                });
+
+                // Request pointer lock on click
+                this.renderer.domElement.addEventListener('click', () => {
+                    this.renderer.domElement.requestPointerLock();
+                });
+            }
+
+            generateWorld() {
+                // Simple flat world with some height variation
+                for (let x = -WORLD_SIZE; x < WORLD_SIZE; x++) {
+                    for (let z = -WORLD_SIZE; z < WORLD_SIZE; z++) {
+                        const height = Math.floor(Math.random() * 3) + 10;
+                        for (let y = 0; y <= height; y++) {
+                            let blockType = 'dirt';
+                            if (y === height) blockType = 'grass';
+                            else if (y > height - 3) blockType = 'dirt';
+                            else blockType = 'stone';
+
+                            this.setBlock(x, y, z, blockType);
+                        }
+                    }
+                }
+
+                // Add some trees
+                for (let i = 0; i < 20; i++) {
+                    const x = Math.floor(Math.random() * WORLD_SIZE * 2) - WORLD_SIZE;
+                    const z = Math.floor(Math.random() * WORLD_SIZE * 2) - WORLD_SIZE;
+                    const height = this.getHighestBlock(x, z) + 1;
+
+                    // Trunk
+                    for (let y = height; y < height + 4; y++) {
+                        this.setBlock(x, y, z, 'wood');
+                    }
+
+                    // Leaves
+                    for (let dx = -2; dx <= 2; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dz = -2; dz <= 2; dz++) {
+                                if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= 3) {
+                                    this.setBlock(x + dx, height + 3 + dy, z + dz, 'leaves');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            getHighestBlock(x, z) {
+                for (let y = 50; y >= 0; y--) {
+                    if (this.getBlock(x, y, z) !== 'air') {
+                        return y;
+                    }
+                }
+                return 0;
+            }
+
+            setBlock(x, y, z, type) {
+                const key = `${x},${y},${z}`;
+                if (type === 'air') {
+                    if (this.world[key]) {
+                        this.scene.remove(this.world[key]);
+                        delete this.world[key];
+                    }
+                } else {
+                    if (this.world[key]) {
+                        this.scene.remove(this.world[key]);
+                    }
+
+                    const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                    const material = new THREE.MeshLambertMaterial({ color: BLOCK_TYPES[type].color });
+                    const cube = new THREE.Mesh(geometry, material);
+                    cube.position.set(x * BLOCK_SIZE, y * BLOCK_SIZE, z * BLOCK_SIZE);
+                    this.scene.add(cube);
+                    this.world[key] = cube;
+                }
+            }
+
+            getBlock(x, y, z) {
+                const key = `${x},${y},${z}`;
+                return this.world[key] ? 'grass' : 'air'; // Simplified - all blocks are treated as grass for now
+            }
+
+            update(deltaTime) {
+                // Player movement
+                const speed = 5;
+                const direction = new THREE.Vector3();
+
+                if (this.keys['KeyW']) direction.z -= 1;
+                if (this.keys['KeyS']) direction.z += 1;
+                if (this.keys['KeyA']) direction.x -= 1;
+                if (this.keys['KeyD']) direction.x += 1;
+
+                direction.normalize();
+                direction.multiplyScalar(speed * deltaTime);
+
+                // Apply camera rotation
+                direction.applyEuler(this.camera.rotation);
+                direction.y = 0; // Don't move up/down with WASD
+
+                this.player.velocity.x = direction.x;
+                this.player.velocity.z = direction.z;
+
+                // Gravity
+                if (!this.player.onGround) {
+                    this.player.velocity.y -= 20 * deltaTime;
+                }
+
+                // Jump
+                if (this.keys['Space'] && this.player.onGround) {
+                    this.player.velocity.y = 8;
+                    this.player.onGround = false;
+                }
+
+                // Update position
+                this.player.position.add(this.player.velocity);
+
+                // Collision detection (simplified)
+                const playerHeight = 1.8;
+                const playerRadius = 0.3;
+
+                // Check ground collision
+                const groundY = this.getHighestBlock(
+                    Math.round(this.player.position.x),
+                    Math.round(this.player.position.z)
+                ) + playerHeight / 2;
+
+                if (this.player.position.y <= groundY) {
+                    this.player.position.y = groundY;
+                    this.player.velocity.y = 0;
+                    this.player.onGround = true;
+                } else {
+                    this.player.onGround = false;
+                }
+
+                // Update camera
+                this.camera.position.copy(this.player.position);
+                this.camera.position.y += playerHeight / 2;
+            }
+
+            onKeyDown(event) {
+                this.keys[event.code] = true;
+
+                // Number keys for block selection
+                if (event.code >= 'Digit1' && event.code <= 'Digit9') {
+                    const index = parseInt(event.code.slice(-1)) - 1;
+                    const slots = document.querySelectorAll('.inventory-slot');
+                    if (slots[index]) {
+                        document.querySelectorAll('.inventory-slot').forEach(s => s.classList.remove('selected'));
+                        slots[index].classList.add('selected');
+                        this.selectedBlock = slots[index].dataset.block;
+                    }
+                }
+            }
+
+            onKeyUp(event) {
+                this.keys[event.code] = false;
+            }
+
+            onMouseDown(event) {
+                this.mouse.buttons = event.buttons;
+
+                if (document.pointerLockElement === this.renderer.domElement) {
+                    // Cast ray to find block
+                    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+                    const intersects = this.raycaster.intersectObjects(Object.values(this.world));
+
+                    if (intersects.length > 0) {
+                        const intersect = intersects[0];
+                        const point = intersect.point;
+                        const normal = intersect.face.normal;
+
+                        const blockX = Math.round(point.x / BLOCK_SIZE + normal.x * 0.5);
+                        const blockY = Math.round(point.y / BLOCK_SIZE + normal.y * 0.5);
+                        const blockZ = Math.round(point.z / BLOCK_SIZE + normal.z * 0.5);
+
+                        if (event.button === 0) { // Left click - remove block
+                            this.setBlock(blockX, blockY, blockZ, 'air');
+                        } else if (event.button === 2) { // Right click - place block
+                            const placeX = Math.round(point.x / BLOCK_SIZE - normal.x * 0.5);
+                            const placeY = Math.round(point.y / BLOCK_SIZE - normal.y * 0.5);
+                            const placeZ = Math.round(point.z / BLOCK_SIZE - normal.z * 0.5);
+                            this.setBlock(placeX, placeY, placeZ, this.selectedBlock);
+                        }
+                    }
+                }
+            }
+
+            onMouseUp(event) {
+                this.mouse.buttons = event.buttons;
+            }
+
+            onMouseMove(event) {
+                if (document.pointerLockElement === this.renderer.domElement) {
+                    const sensitivity = 0.002;
+                    this.camera.rotation.y -= event.movementX * sensitivity;
+                    this.camera.rotation.x -= event.movementY * sensitivity;
+                    this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
+                }
+            }
+
+            onPointerLockChange() {
+                if (document.pointerLockElement !== this.renderer.domElement) {
+                    // Pointer lock released
+                }
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                const deltaTime = 1 / 60; // Fixed timestep for simplicity
+                this.update(deltaTime);
+
+                this.renderer.render(this.scene, this.camera);
+            }
         }
 
-        section {
-            padding: 4rem 2rem;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 3rem;
-            color: #667eea;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            margin: 3rem 0;
-        }
-
-        .stat-card {
+        // Start the game
+        new MinecraftGame();
+    </script>
+</body>
+</html>
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 2rem;
             border-radius: 10px;
