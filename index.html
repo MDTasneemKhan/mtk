@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>BlockCraft Hub</title>
+    <title>BlockCraft 2D Lite</title>
     <style>
         :root {
             color-scheme: dark;
@@ -636,14 +636,13 @@
             </div>
             <div id="overlay-ui">
                 <div class="ui-strip">
-                    <div><strong>BlockCraft Controls</strong></div>
-                    <div class="small">WASD = Move | Mouse = Look | Left click = Remove | Right click = Place | Space = Jump</div>
+                    <div><strong>BlockCraft 2D Controls</strong></div>
+                    <div class="small">WASD = Move | Left click = Remove | Right click = Place | 1-5 = Select block</div>
                     <div class="status-pill" id="game-room-pill">Solo mode</div>
                 </div>
                 <div id="inventory-bar"></div>
                 <div class="touch-controls" id="touch-controls">
                     <div class="touch-row">
-                        <button id="touch-jump">Jump</button>
                         <button id="touch-place">Place</button>
                     </div>
                     <div class="touch-row">
@@ -656,7 +655,6 @@
 
     <div id="toast" class="toast"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         const USER_KEY = 'blockcraft_users';
         const ACTIVE_USER_KEY = 'blockcraft_active_user';
@@ -673,14 +671,6 @@
             messages: []
         };
 
-        const debounce = (fn, delay) => {
-            let timer = null;
-            return (...args) => {
-                clearTimeout(timer);
-                timer = setTimeout(() => fn(...args), delay);
-            };
-        };
-
         const AVATARS = {
             classic: { name: 'Classic', palette: ['#4b5563', '#f97316', '#ffffff', '#fde68a'] },
             miner: { name: 'Miner', palette: ['#334155', '#facc15', '#6b7280', '#cbd5e1'] },
@@ -695,15 +685,6 @@
             { id: 'wood', label: 'Wood', color: '#d97706' },
             { id: 'leaves', label: 'Leaves', color: '#15803d' }
         ];
-
-        const BLOCK_GEOMETRY = new THREE.BoxGeometry(1, 1, 1);
-        const BLOCK_MATERIALS = {
-            grass: new THREE.MeshLambertMaterial({ color: '#4ade80' }),
-            dirt: new THREE.MeshLambertMaterial({ color: '#a16207' }),
-            stone: new THREE.MeshLambertMaterial({ color: '#6b7280' }),
-            wood: new THREE.MeshLambertMaterial({ color: '#d97706' }),
-            leaves: new THREE.MeshLambertMaterial({ color: '#15803d' })
-        };
 
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
@@ -749,7 +730,6 @@
         };
 
         const mobileButtons = {
-            jump: document.getElementById('touch-jump'),
             place: document.getElementById('touch-place'),
             remove: document.getElementById('touch-remove')
         };
@@ -1083,7 +1063,6 @@
                 });
             });
 
-            mobileButtons.jump.addEventListener('click', () => gameInstance?.localJump());
             mobileButtons.place.addEventListener('click', () => gameInstance?.localPlace());
             mobileButtons.remove.addEventListener('click', () => gameInstance?.localRemove());
         }
@@ -1104,130 +1083,62 @@
             constructor({ username, avatar }) {
                 this.username = username;
                 this.avatar = avatar;
-                this.scene = new THREE.Scene();
-                this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-                this.renderer.setPixelRatio(window.devicePixelRatio);
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
-                this.renderer.setClearColor('#0b1220');
-                this.world = new Map();
+                this.canvas = document.createElement('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.worldSize = 24;
+                this.blockSize = 20;
+                this.world = Array(this.worldSize).fill().map(() => Array(this.worldSize).fill('air'));
                 this.remotePlayers = new Map();
-                this.player = {
-                    position: new THREE.Vector3(0, 14, 0),
-                    velocity: new THREE.Vector3(0, 0, 0),
-                    onGround: false
-                };
+                this.player = { x: this.worldSize / 2, z: this.worldSize / 2 };
                 this.keys = {};
                 this.selectedBlock = inventoryItems[0].id;
-                this.raycaster = new THREE.Raycaster();
-                this.pointerLocked = false;
+                this.camera = { x: 0, y: 0 };
                 this.lastBroadcast = 0;
-                this.lastFrameTime = performance.now();
                 this.animate = this.animate.bind(this);
                 this.onResize = this.onResize.bind(this);
-                this.onResizeDebounced = debounce(this.onResize, 120);
-                this.tick = this.tick.bind(this);
                 this.onKeyDown = this.onKeyDown.bind(this);
                 this.onKeyUp = this.onKeyUp.bind(this);
                 this.onMouseDown = this.onMouseDown.bind(this);
-                this.onMouseMove = this.onMouseMove.bind(this);
-                this.onPointerLockChange = this.onPointerLockChange.bind(this);
 
                 DOM.gameContainer.innerHTML = '';
-                DOM.gameContainer.appendChild(this.renderer.domElement);
-                this.initScene();
+                DOM.gameContainer.appendChild(this.canvas);
+                this.onResize();
                 this.generateWorld();
                 this.updateInventory();
                 this.animate();
-                window.addEventListener('resize', this.onResizeDebounced);
+                window.addEventListener('resize', this.onResize);
                 window.addEventListener('keydown', this.onKeyDown);
                 window.addEventListener('keyup', this.onKeyUp);
-                window.addEventListener('mousedown', this.onMouseDown);
-                window.addEventListener('mousemove', this.onMouseMove);
-                document.addEventListener('pointerlockchange', this.onPointerLockChange);
+                this.canvas.addEventListener('mousedown', this.onMouseDown);
             }
 
-            initScene() {
-                const ambient = new THREE.AmbientLight(0xffffff, 0.65);
-                this.scene.add(ambient);
-                const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
-                dirLight.position.set(10, 18, 10);
-                this.scene.add(dirLight);
-                this.camera.position.copy(this.player.position).add(new THREE.Vector3(0, 1.6, 0));
-
-                const fogColor = new THREE.Color('#0b1220');
-                this.scene.fog = new THREE.Fog(fogColor, 8, 70);
-                this.scene.background = fogColor;
-
-                const plane = new THREE.Mesh(
-                    new THREE.PlaneGeometry(500, 500),
-                    new THREE.MeshBasicMaterial({ color: '#08101d' })
-                );
-                plane.rotation.x = -Math.PI / 2;
-                plane.position.y = -0.51;
-                this.scene.add(plane);
+            onResize() {
+                this.canvas.width = DOM.gameContainer.clientWidth;
+                this.canvas.height = DOM.gameContainer.clientHeight;
+                this.camera.x = this.player.x * this.blockSize - this.canvas.width / 2;
+                this.camera.y = this.player.z * this.blockSize - this.canvas.height / 2;
             }
 
             generateWorld() {
-                const size = 12;
-                for (let x = -size; x <= size; x++) {
-                    for (let z = -size; z <= size; z++) {
-                        const height = Math.floor(Math.sin(x * 0.4) * 1.5 + Math.cos(z * 0.4) * 1.5 + 9);
-                        for (let y = 0; y <= height; y++) {
-                            const type = y === height ? 'grass' : y > height - 2 ? 'dirt' : 'stone';
-                            this.setBlock(x, y, z, type);
-                        }
-                    }
-                }
-                for (let i = 0; i < 10; i++) {
-                    const x = Math.floor(Math.random() * 24) - 12;
-                    const z = Math.floor(Math.random() * 24) - 12;
-                    const y = this.getHighestBlock(x, z) + 1;
-                    for (let t = y; t < y + 3; t++) this.setBlock(x, t, z, 'wood');
-                    for (let dx = -1; dx <= 1; dx++) {
-                        for (let dy = 0; dy <= 2; dy++) {
-                            for (let dz = -1; dz <= 1; dz++) {
-                                if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) < 3) {
-                                    this.setBlock(x + dx, y + 2 + dy, z + dz, 'leaves');
-                                }
-                            }
-                        }
+                for (let x = 0; x < this.worldSize; x++) {
+                    for (let z = 0; z < this.worldSize; z++) {
+                        const height = Math.floor(Math.sin(x * 0.3) * 2 + Math.cos(z * 0.3) * 2 + 5);
+                        this.world[x][z] = height > 0 ? 'grass' : 'air';
                     }
                 }
             }
 
-            setBlock(x, y, z, type) {
-                const key = `${x},${y},${z}`;
-                if (type === 'air') {
-                    const mesh = this.world.get(key);
-                    if (mesh) {
-                        this.scene.remove(mesh);
-                        this.world.delete(key);
-                    }
-                    return;
+            setBlock(x, z, type) {
+                if (x >= 0 && x < this.worldSize && z >= 0 && z < this.worldSize) {
+                    this.world[x][z] = type;
                 }
-                const existing = this.world.get(key);
-                if (existing) this.scene.remove(existing);
-                const material = BLOCK_MATERIALS[type] || new THREE.MeshLambertMaterial({ color: BLOCK_COLORS[type] });
-                const cube = new THREE.Mesh(BLOCK_GEOMETRY, material);
-                cube.position.set(x, y, z);
-                cube.castShadow = true;
-                cube.receiveShadow = true;
-                this.scene.add(cube);
-                cube.userData = { type };
-                this.world.set(key, cube);
             }
 
-            getBlock(x, y, z) {
-                const mesh = this.world.get(`${x},${y},${z}`);
-                return mesh ? mesh.userData.type : 'air';
-            }
-
-            getHighestBlock(x, z) {
-                for (let y = 32; y >= 0; y--) {
-                    if (this.getBlock(x, y, z) !== 'air') return y;
+            getBlock(x, z) {
+                if (x >= 0 && x < this.worldSize && z >= 0 && z < this.worldSize) {
+                    return this.world[x][z];
                 }
-                return -1;
+                return 'air';
             }
 
             updateInventory() {
@@ -1245,127 +1156,108 @@
                 });
             }
 
-            animate(time) {
+            animate() {
                 this.frameId = requestAnimationFrame(this.animate);
-                const deltaTime = this.lastFrameTime ? Math.min((time - this.lastFrameTime) / 1000, 0.05) : 1 / 60;
-                this.lastFrameTime = time;
-                this.tick(deltaTime);
-                this.renderer.render(this.scene, this.camera);
+                this.tick();
+                this.render();
             }
 
-            tick(deltaTime) {
-                const direction = new THREE.Vector3();
-                if (this.keys['KeyW']) direction.z -= 1;
-                if (this.keys['KeyS']) direction.z += 1;
-                if (this.keys['KeyA']) direction.x -= 1;
-                if (this.keys['KeyD']) direction.x += 1;
-                direction.normalize().multiplyScalar(5 * deltaTime);
-                direction.applyEuler(new THREE.Euler(0, this.camera.rotation.y, 0));
-                this.player.velocity.x = direction.x;
-                this.player.velocity.z = direction.z;
-
-                if (!this.player.onGround) this.player.velocity.y -= 20 * deltaTime;
-                if (this.keys['Space'] && this.player.onGround) {
-                    this.player.velocity.y = 8;
-                    this.player.onGround = false;
+            tick() {
+                let dx = 0, dz = 0;
+                if (this.keys['KeyW']) dz -= 1;
+                if (this.keys['KeyS']) dz += 1;
+                if (this.keys['KeyA']) dx -= 1;
+                if (this.keys['KeyD']) dx += 1;
+                if (dx || dz) {
+                    this.player.x = Math.max(0, Math.min(this.worldSize - 1, this.player.x + dx * 0.1));
+                    this.player.z = Math.max(0, Math.min(this.worldSize - 1, this.player.z + dz * 0.1));
+                    this.camera.x = this.player.x * this.blockSize - this.canvas.width / 2;
+                    this.camera.y = this.player.z * this.blockSize - this.canvas.height / 2;
                 }
-
-                this.player.position.add(this.player.velocity);
-                const groundHeight = this.getHighestBlock(Math.round(this.player.position.x), Math.round(this.player.position.z)) + 1.6;
-                if (this.player.position.y <= groundHeight) {
-                    this.player.position.y = groundHeight;
-                    this.player.velocity.y = 0;
-                    this.player.onGround = true;
-                }
-
-                this.camera.position.copy(this.player.position).add(new THREE.Vector3(0, 1.5, 0));
-                this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
                 if (STATE.connected && Date.now() - this.lastBroadcast > 250) {
-                    publishNetworkEvent('position', { position: this.player.position.toArray() });
+                    publishNetworkEvent('position', { position: [this.player.x, 0, this.player.z] });
                     this.lastBroadcast = Date.now();
                 }
             }
 
-            onResize() {
-                this.camera.aspect = window.innerWidth / window.innerHeight;
-                this.camera.updateProjectionMatrix();
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            render() {
+                this.ctx.fillStyle = '#0b1220';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.save();
+                this.ctx.translate(-this.camera.x, -this.camera.y);
+                for (let x = 0; x < this.worldSize; x++) {
+                    for (let z = 0; z < this.worldSize; z++) {
+                        const block = this.world[x][z];
+                        if (block !== 'air') {
+                            this.ctx.fillStyle = BLOCK_COLORS[block];
+                            this.ctx.fillRect(x * this.blockSize, z * this.blockSize, this.blockSize, this.blockSize);
+                        }
+                    }
+                }
+                // Draw player
+                this.ctx.fillStyle = AVATARS[this.avatar]?.palette[1] || '#38bdf8';
+                this.ctx.fillRect(this.player.x * this.blockSize - 5, this.player.z * this.blockSize - 5, 10, 10);
+                // Draw remote players
+                for (const [name, player] of this.remotePlayers) {
+                    this.ctx.fillStyle = AVATARS[player.avatar]?.palette[1] || '#38bdf8';
+                    this.ctx.fillRect(player.x * this.blockSize - 5, player.z * this.blockSize - 5, 10, 10);
+                }
+                this.ctx.restore();
             }
 
             onKeyDown(event) {
                 this.keys[event.code] = true;
-                if (event.code === 'Digit1') this.selectedBlock = inventoryItems[0].id;
-                if (event.code === 'Digit2') this.selectedBlock = inventoryItems[1].id;
-                if (event.code === 'Digit3') this.selectedBlock = inventoryItems[2].id;
-                if (event.code === 'Digit4') this.selectedBlock = inventoryItems[3].id;
-                if (event.code === 'Digit5') this.selectedBlock = inventoryItems[4].id;
-                this.updateInventory();
+                if (event.code.startsWith('Digit') && event.code.length === 6) {
+                    const index = parseInt(event.code.slice(-1)) - 1;
+                    if (inventoryItems[index]) {
+                        this.selectedBlock = inventoryItems[index].id;
+                        this.updateInventory();
+                    }
+                }
             }
 
             onKeyUp(event) {
                 this.keys[event.code] = false;
             }
 
-            onMouseMove(event) {
-                if (document.pointerLockElement !== this.renderer.domElement) return;
-                const sensitivity = 0.0022;
-                this.camera.rotation.y -= event.movementX * sensitivity;
-                this.camera.rotation.x -= event.movementY * sensitivity;
-            }
-
-            onPointerLockChange() {
-                this.pointerLocked = document.pointerLockElement === this.renderer.domElement;
-            }
-
             onMouseDown(event) {
-                if (event.target !== this.renderer.domElement) return;
-                if (document.pointerLockElement !== this.renderer.domElement) {
-                    this.renderer.domElement.requestPointerLock();
-                    return;
-                }
-                event.preventDefault();
-                this.performBlockAction(event.button);
-            }
-
-            performBlockAction(button) {
-                this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
-                const intersects = this.raycaster.intersectObjects(Array.from(this.world.values()));
-                if (!intersects.length) return;
-                const hit = intersects[0];
-                if (button === 0) {
-                    const x = Math.round(hit.point.x - hit.face.normal.x * 0.5);
-                    const y = Math.round(hit.point.y - hit.face.normal.y * 0.5);
-                    const z = Math.round(hit.point.z - hit.face.normal.z * 0.5);
-                    this.setBlock(x, y, z, 'air');
-                } else if (button === 2) {
-                    const px = Math.round(hit.point.x + hit.face.normal.x * 0.5);
-                    const py = Math.round(hit.point.y + hit.face.normal.y * 0.5);
-                    const pz = Math.round(hit.point.z + hit.face.normal.z * 0.5);
-                    if (this.getBlock(px, py, pz) === 'air') {
-                        this.setBlock(px, py, pz, this.selectedBlock);
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left + this.camera.x;
+                const mouseY = event.clientY - rect.top + this.camera.y;
+                const blockX = Math.floor(mouseX / this.blockSize);
+                const blockZ = Math.floor(mouseY / this.blockSize);
+                if (event.button === 0) {
+                    this.setBlock(blockX, blockZ, 'air');
+                } else if (event.button === 2) {
+                    if (this.getBlock(blockX, blockZ) === 'air') {
+                        this.setBlock(blockX, blockZ, this.selectedBlock);
                     }
                 }
             }
 
-            localJump() {
-                if (this.player.onGround) {
-                    this.player.velocity.y = 8;
-                    this.player.onGround = false;
+            localPlace() {
+                // Simulate right click at center
+                const centerX = this.canvas.width / 2 + this.camera.x;
+                const centerY = this.canvas.height / 2 + this.camera.y;
+                const blockX = Math.floor(centerX / this.blockSize);
+                const blockZ = Math.floor(centerY / this.blockSize);
+                if (this.getBlock(blockX, blockZ) === 'air') {
+                    this.setBlock(blockX, blockZ, this.selectedBlock);
                 }
             }
 
-            localPlace() {
-                this.performBlockAction(2);
-            }
-
             localRemove() {
-                this.performBlockAction(0);
+                const centerX = this.canvas.width / 2 + this.camera.x;
+                const centerY = this.canvas.height / 2 + this.camera.y;
+                const blockX = Math.floor(centerX / this.blockSize);
+                const blockZ = Math.floor(centerY / this.blockSize);
+                this.setBlock(blockX, blockZ, 'air');
             }
 
             startLocalBroadcast() {
                 if (networkTimer) return;
                 networkTimer = setInterval(() => {
-                    publishNetworkEvent('position', { position: this.player.position.toArray() });
+                    publishNetworkEvent('position', { position: [this.player.x, 0, this.player.z] });
                 }, 300);
             }
 
@@ -1376,31 +1268,14 @@
 
             dispose() {
                 cancelAnimationFrame(this.frameId);
-                window.removeEventListener('resize', this.onResizeDebounced);
+                window.removeEventListener('resize', this.onResize);
                 window.removeEventListener('keydown', this.onKeyDown);
                 window.removeEventListener('keyup', this.onKeyUp);
-                window.removeEventListener('mousedown', this.onMouseDown);
-                window.removeEventListener('mousemove', this.onMouseMove);
-                document.removeEventListener('pointerlockchange', this.onPointerLockChange);
-                this.renderer.dispose();
-                this.scene = null;
+                this.canvas.removeEventListener('mousedown', this.onMouseDown);
             }
 
             updateRemotePlayer(name, position, avatar) {
-                let remote = this.remotePlayers.get(name);
-                if (!remote) {
-                    const group = new THREE.Group();
-                    const material = new THREE.MeshStandardMaterial({ color: AVATARS[avatar]?.palette[1] || '#38bdf8' });
-                    const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), material);
-                    const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1, 0.4), material);
-                    head.position.set(0, 1.4, 0);
-                    body.position.set(0, 0.6, 0);
-                    group.add(head, body);
-                    this.scene.add(group);
-                    remote = { group, avatar };
-                    this.remotePlayers.set(name, remote);
-                }
-                remote.group.position.set(position[0], position[1], position[2]);
+                this.remotePlayers.set(name, { x: position[0], z: position[2], avatar });
                 addPlayerChip(name, avatar, false);
             }
         }
