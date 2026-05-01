@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProGamer Jake - Gaming Content Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #0a0e27;
+            color: #fff;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-decoration: none;
+            color: #fff;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #fff;
+            text-decoration: none;
+            transition: opacity 0.3s;
+        }
+
+        .nav-links a:hover {
+            opacity: 0.8;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: slideInDown 0.8s ease;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #ff6b6b;
+            color: white;
+            padding: 0.8rem 2rem;
+            text-decoration: none;
+            border-radius: 30px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .cta-button:hover {
+            background-color: #ff5252;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            padding: 4rem 2rem;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #667eea;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+
+        .stat-label {
+            margin-top: 0.5rem;
+            color: #e0e0e0;
+        }
+
+        .videos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .video-card {
+            background: #1a1f3a;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 160px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .video-info {
+            padding: 1.5rem;
+        }
+
+        .video-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .video-meta {
+            font-size: 0.9rem;
+            color: #b0b0b0;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .social-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: white;
+            font-size: 1.5rem;
+            transition: transform 0.3s;
+        }
+
+        .social-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .about-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .about-text h2 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .about-text p {
+            margin-bottom: 1rem;
+            color: #ccc;
+            line-height: 1.8;
+        }
+
+        .about-image {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+        }
+
+        footer {
+            background: #0f1428;
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid #667eea;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .about-section {
+                grid-template-columns: 1fr;
+            }
+
+            .videos-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="#" class="logo">🎮 ProGamer Jake</a>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#videos">Videos</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1>Welcome to My Gaming Universe</h1>
+            <p>Watch the latest gameplay, reviews, and streaming content</p>
+            <a href="#" class="cta-button">Subscribe Now</a>
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">500K+</div>
+                <div class="stat-label">YouTube Subscribers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">2M+</div>
+                <div class="stat-label">Total Views</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">150+</div>
+                <div class="stat-label">Videos Published</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">8 Yrs</div>
+                <div class="stat-label">Gaming Experience</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container" id="about">
+        <h2 class="section-title">About Me</h2>
+        <div class="about-section">
+            <div class="about-text">
+                <h2>ProGamer Jake</h2>
+                <p>Hey! I'm Jake, a passionate gaming content creator with over 8 years of experience in competitive gaming and streaming. I create entertaining and informative content covering a wide range of games.</p>
+                <p>My mission is to build a community of gamers who love high-quality gameplay, funny moments, and insightful game reviews. Whether you're into FPS games, RPGs, or indie gems, you'll find something here!</p>
+                <p>When I'm not gaming, you can find me streaming on Twitch or working on new video concepts for my YouTube channel.</p>
+            </div>
+            <div class="about-image">👨‍💻</div>
+        </div>
+    </section>
+
+    <section class="container" id="videos">
+        <h2 class="section-title">Latest Videos</h2>
+        <div class="videos-grid">
+            <div class="video-card">
+                <div class="video-thumbnail">🎬</div>
+                <div class="video-info">
+                    <div class="video-title">Top 10 FPS Games 2026</div>
+                    <div class="video-meta">2.5K views • 3 days ago</div>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-thumbnail">🎮</div>
+                <div class="video-info">
+                    <div class="video-title">Epic Gaming Fails Compilation</div>
+                    <div class="video-meta">5.2K views • 1 week ago</div>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-thumbnail">🏆</div>
+                <div class="video-info">
+                    <div class="video-title">Championship Tournament Highlights</div>
+                    <div class="video-meta">8.1K views • 2 weeks ago</div>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-thumbnail">⚡</div>
+                <div class="video-info">
+                    <div class="video-title">Speedrun Challenge - Can I Beat It?</div>
+                    <div class="video-meta">3.7K views • 3 weeks ago</div>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-thumbnail">🎯</div>
+                <div class="video-info">
+                    <div class="video-title">Game Review: Pixel Quest</div>
+                    <div class="video-meta">4.2K views • 4 weeks ago</div>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-thumbnail">🌟</div>
+                <div class="video-info">
+                    <div class="video-title">New Game Launch Day Reaction</div>
+                    <div class="video-meta">6.9K views • 1 month ago</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container" id="contact">
+        <h2 class="section-title">Connect With Me</h2>
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <p style="color: #ccc; margin-bottom: 1.5rem;">Follow me on my social media channels</p>
+        </div>
+        <div class="social-links">
+            <a href="#" class="social-icon" title="YouTube">📺</a>
+            <a href="#" class="social-icon" title="Twitch">📹</a>
+            <a href="#" class="social-icon" title="Twitter">𝕏</a>
+            <a href="#" class="social-icon" title="Discord">💬</a>
+            <a href="#" class="social-icon" title="Instagram">📷</a>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2026 ProGamer Jake. All rights reserved. | Made with ❤️ for gamers</p>
+            <p style="margin-top: 1rem; color: #888;">Contact: jake@progamer.com</p>
+        </div>
+    </footer>
+</body>
+</html>
