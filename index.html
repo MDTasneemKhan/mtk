@@ -696,6 +696,15 @@
             { id: 'leaves', label: 'Leaves', color: '#15803d' }
         ];
 
+        const BLOCK_GEOMETRY = new THREE.BoxGeometry(1, 1, 1);
+        const BLOCK_MATERIALS = {
+            grass: new THREE.MeshLambertMaterial({ color: '#4ade80' }),
+            dirt: new THREE.MeshLambertMaterial({ color: '#a16207' }),
+            stone: new THREE.MeshLambertMaterial({ color: '#6b7280' }),
+            wood: new THREE.MeshLambertMaterial({ color: '#d97706' }),
+            leaves: new THREE.MeshLambertMaterial({ color: '#15803d' })
+        };
+
         const DOM = {
             loginScreen: document.getElementById('login-screen'),
             menuScreen: document.getElementById('menu-screen'),
@@ -1114,9 +1123,10 @@
                 this.pointerLocked = false;
                 this.lastBroadcast = 0;
                 this.lastFrameTime = performance.now();
+                this.animate = this.animate.bind(this);
+                this.onResize = this.onResize.bind(this);
                 this.onResizeDebounced = debounce(this.onResize, 120);
                 this.tick = this.tick.bind(this);
-                this.onResize = this.onResize.bind(this);
                 this.onKeyDown = this.onKeyDown.bind(this);
                 this.onKeyUp = this.onKeyUp.bind(this);
                 this.onMouseDown = this.onMouseDown.bind(this);
@@ -1151,35 +1161,34 @@
 
                 const plane = new THREE.Mesh(
                     new THREE.PlaneGeometry(500, 500),
-                    new THREE.MeshStandardMaterial({ color: '#08101d' })
+                    new THREE.MeshBasicMaterial({ color: '#08101d' })
                 );
                 plane.rotation.x = -Math.PI / 2;
                 plane.position.y = -0.51;
                 this.scene.add(plane);
-                plane.receiveShadow = true;
             }
 
             generateWorld() {
-                const size = 18;
+                const size = 12;
                 for (let x = -size; x <= size; x++) {
                     for (let z = -size; z <= size; z++) {
-                        const height = Math.floor(Math.sin(x * 0.3) * 2 + Math.cos(z * 0.3) * 2 + 11);
+                        const height = Math.floor(Math.sin(x * 0.4) * 1.5 + Math.cos(z * 0.4) * 1.5 + 9);
                         for (let y = 0; y <= height; y++) {
-                            const type = y === height ? 'grass' : y > height - 3 ? 'dirt' : 'stone';
+                            const type = y === height ? 'grass' : y > height - 2 ? 'dirt' : 'stone';
                             this.setBlock(x, y, z, type);
                         }
                     }
                 }
-                for (let i = 0; i < 18; i++) {
-                    const x = Math.floor(Math.random() * 30) - 15;
-                    const z = Math.floor(Math.random() * 30) - 15;
+                for (let i = 0; i < 10; i++) {
+                    const x = Math.floor(Math.random() * 24) - 12;
+                    const z = Math.floor(Math.random() * 24) - 12;
                     const y = this.getHighestBlock(x, z) + 1;
-                    for (let t = y; t < y + 4; t++) this.setBlock(x, t, z, 'wood');
-                    for (let dx = -2; dx <= 2; dx++) {
-                        for (let dy = -2; dy <= 2; dy++) {
-                            for (let dz = -2; dz <= 2; dz++) {
-                                if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) < 4) {
-                                    this.setBlock(x + dx, y + 4 + dy, z + dz, 'leaves');
+                    for (let t = y; t < y + 3; t++) this.setBlock(x, t, z, 'wood');
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = 0; dy <= 2; dy++) {
+                            for (let dz = -1; dz <= 1; dz++) {
+                                if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) < 3) {
+                                    this.setBlock(x + dx, y + 2 + dy, z + dz, 'leaves');
                                 }
                             }
                         }
@@ -1199,9 +1208,8 @@
                 }
                 const existing = this.world.get(key);
                 if (existing) this.scene.remove(existing);
-                const geometry = new THREE.BoxGeometry(1, 1, 1);
-                const material = new THREE.MeshStandardMaterial({ color: BLOCK_COLORS[type] });
-                const cube = new THREE.Mesh(geometry, material);
+                const material = BLOCK_MATERIALS[type] || new THREE.MeshLambertMaterial({ color: BLOCK_COLORS[type] });
+                const cube = new THREE.Mesh(BLOCK_GEOMETRY, material);
                 cube.position.set(x, y, z);
                 cube.castShadow = true;
                 cube.receiveShadow = true;
@@ -1238,7 +1246,7 @@
             }
 
             animate(time) {
-                this.frameId = requestAnimationFrame(this.animate.bind(this));
+                this.frameId = requestAnimationFrame(this.animate);
                 const deltaTime = this.lastFrameTime ? Math.min((time - this.lastFrameTime) / 1000, 0.05) : 1 / 60;
                 this.lastFrameTime = time;
                 this.tick(deltaTime);
