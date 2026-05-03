@@ -6,8 +6,8 @@ const ctx = canvas.getContext('2d');
 const player = {
     x: 400,  // Starting position in the middle
     y: 300,
-    width: 20,
-    height: 20,
+    width: 50,
+    height: 50,
     speed: 5,
     color: 'blue'
 };
@@ -52,6 +52,8 @@ function gameLoop() {
     // Draw the player
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    console.log("Player position: " + player.x + ", " + player.y);  // Debug: shows position in console
 
     // Request the next frame
     requestAnimationFrame(gameLoop);
